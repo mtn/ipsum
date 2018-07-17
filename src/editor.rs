@@ -7,7 +7,7 @@ use ::view::View;
 
 
 enum Mode {
-    Intert,
+    Insert,
     Normal,
 }
 
