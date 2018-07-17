@@ -1,53 +1,42 @@
+#![feature(extern_prelude)]
 extern crate termion;
+extern crate lazy_static;
 
-use std::io::{stdin, stdout, Write};
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
+mod editor;
+mod view;
 
 fn main() {
-    let stdin = stdin();
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    let mut editor = editor::Editor::new();
+    editor.process_keypresses();
 
-    write!(
-        stdout,
-        "{}{}q to exit. Type stuff, use alt, and so on.{}",
-        // Clear the screen.
-        termion::clear::All,
-        // Goto (1,1).
-        termion::cursor::Goto(1, 1),
-        // Hide the cursor.
-        termion::cursor::Hide
-    ).unwrap();
-    // Flush stdout (i.e. make the output appear).
-    stdout.flush().unwrap();
+    // let stdout = stdout();
+    // let mut stdout = stdout.lock().into_raw_mode().unwrap();
+    // let mut stdin = async_stdin().bytes();
 
-    for c in stdin.keys() {
-        // Clear the current line.
-        write!(
-            stdout,
-            "{}{}",
-            termion::cursor::Goto(1, 1),
-            termion::clear::CurrentLine
-        ).unwrap();
+    // write!(stdout,
+    //        "{}{}",
+    //        termion::clear::All,
+    //        termion::cursor::Goto(1, 1))
+    //         .unwrap();
 
-        // Print the key we type...
-        match c.unwrap() {
-            // Exit.
-            Key::Char('q') => break,
-            Key::Char(c) => println!("{}", c),
-            Key::Alt(c) => println!("Alt-{}", c),
-            Key::Ctrl(c) => println!("Ctrl-{}", c),
-            Key::Left => println!("<left>"),
-            Key::Right => println!("<right>"),
-            Key::Up => println!("<up>"),
-            Key::Down => println!("<down>"),
-            _ => println!("Other"),
-        }
+    // loop {
+    //     write!(stdout, "{}", termion::clear::CurrentLine).unwrap();
 
-        // Flush again.
-        stdout.flush().unwrap();
-    }
+    //     let b = stdin.next();
+    //     write!(stdout, "\r{:?}    <- This demonstrates the async read input char. Between each update a 100 ms. is waited, simply to demonstrate the async fashion. \n\r", b).unwrap();
+    //     if let Some(Ok(b'q')) = b {
+    //         break;
+    //     }
 
-    write!(stdout, "{}", termion::cursor::Show).unwrap();
+    //     stdout.flush().unwrap();
+
+    //     thread::sleep(Duration::from_millis(50));
+    //     stdout.write_all(b"# ").unwrap();
+    //     stdout.flush().unwrap();
+    //     thread::sleep(Duration::from_millis(50));
+    //     stdout.write_all(b"\r #").unwrap();
+    //     write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
+    //     stdout.flush().unwrap();
+    // }
+    //
 }

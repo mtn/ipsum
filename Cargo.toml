@@ -5,3 +5,4 @@ authors = ["Michael Noronha <michaeltnoronha@gmail.com>"]
 
 [dependencies]
 termion = "1.5.1"
+lazy_static = "1.0"
