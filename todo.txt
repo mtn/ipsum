@@ -1,0 +1,21 @@
+immediate
+- pager
+    - rendering scaffholding
+        - tildes, startup. (rely on window size)
+    - allowing cursor to be positioned according to keypresses (hjkl)
+    - read text into ropes
+    - render text from ropes
+- modes
+    - everything is in normal mode till now
+    - edit text
+    - additional normal mode bindings
+- searching
+- syntax highlighting
+    - additional normal mode bindings
+        - eg. insert comment, based on language definition
+
+eventual
+- detecting resizing
+- text soft wrapping
+- pencil mode?
+- communication with language servers?
