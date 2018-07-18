@@ -9,11 +9,20 @@ pub struct View {
 
 impl View {
     pub fn new() -> View {
-        View {
+        let mut view = View {
             out: io::BufWriter::with_capacity(1 << 14, io::stdout())
                 .into_raw_mode()
                 .unwrap()
-        }
+        };
+
+        // Clear the display
+        write!(view.out,
+               "{}{}",
+               termion::clear::All,
+               termion::cursor::Goto(1, 1))
+                .unwrap();
+
+        view
     }
 
     pub fn write(&mut self, s: String) {
