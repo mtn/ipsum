@@ -34,9 +34,14 @@ impl Editor {
 
     pub fn refresh_screen(&mut self) {
         self.view.hide_cursor();
-        self.view.position_cursor(self.cursor_x, self.cursor_y);
+        // Start drawing from the top left
+        self.view.position_cursor(1, 1);
 
-        self.view.draw_rows();
+        self.buffer_rows();
+
+        // Actually render the buffer
+        self.view.render();
+
         self.view.show_cursor();
     }
 
@@ -52,6 +57,7 @@ impl Editor {
             if let Some(Ok(l)) = b {
                 let event = parse_event(l, &mut self.input_stream);
                 if let Ok(Event::Key(Key::Char('q'))) = event {
+                    // Returning will lead to exit, calling destructors
                     return;
                 }
 
@@ -61,6 +67,16 @@ impl Editor {
             // write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
             // self.view.out.flush().unwrap();
         }
+    }
+
+    /// Push rows to render buffer, to be rendered in the view
+    // TODO check a dirty bit to see if the row ahs changed before rerendering
+    fn buffer_rows(&mut self) {
+        for _ in 0..(self.view.term_height-1) {
+            self.view.render_buffer.push_str(&format!("{}~\r\n", termion::clear::CurrentLine));
+        }
+        // self.view.render_buffer.push_str("~");
+        self.view.render_buffer.push_str(&format!("{}~", termion::clear::CurrentLine));
     }
 
 }
