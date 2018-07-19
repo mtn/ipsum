@@ -1,7 +1,5 @@
 immediate
 - pager
-    - rendering scaffholding
-        - tildes, startup. (rely on window size)
     - allowing cursor to be positioned according to keypresses (hjkl)
     - read text into ropes
     - render text from ropes
@@ -19,3 +17,6 @@ eventual
 - text soft wrapping
 - pencil mode?
 - communication with language servers?
+- replace unwraps with better error handling
+    - I don't think destructors are called on panic, which would mean
+      the terminal would remain in raw mode if an unwrapped operation failed
