@@ -6,10 +6,9 @@ use termion::raw::RawTerminal;
 
 pub struct View {
     // TODO make out private
-    pub out: RawTerminal<io::BufWriter<io::Stdout>>,
+    out: RawTerminal<io::BufWriter<io::Stdout>>,
     pub term_width: u16,
     pub term_height: u16,
-    pub render_buffer: String,
 }
 
 impl View {
@@ -23,7 +22,6 @@ impl View {
                 .unwrap(),
             term_width: term_size.0,
             term_height: term_size.1,
-            render_buffer: String::with_capacity(100),
         };
 
         // Clear the display
@@ -38,11 +36,14 @@ impl View {
         view
     }
 
-    pub fn render(&mut self) {
-        write!(self.out, "{}", self.render_buffer).unwrap();
-        write!(self.out, "rendered").unwrap();
-        // Truncate the render buffer, but don't change the capacity
-        self.render_buffer.truncate(0);
+    /// A buffered write
+    pub fn write(&mut self, content: &str) {
+        write!(self.out, "{}", content).unwrap();
+    }
+
+    /// Push the buffer to the screen (flush)
+    pub fn render_through(&mut self) {
+        self.out.flush();
     }
 
     /// Clear screen

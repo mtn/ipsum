@@ -25,7 +25,7 @@ pub struct Editor {
 
 impl Editor {
     pub fn new(filename: Option<&str>) -> Editor {
-        let mut ed = Editor {
+        Editor {
             view: View::new(),
             input_stream: async_stdin().bytes(),
             mode: Mode::Normal,
@@ -34,30 +34,24 @@ impl Editor {
             cursor_y: 1,
 
             dirty: true,
-        };
-
-        // ed.refresh_screen();
-        // println!("Init ed {:?}", ed.dirty);
-        ed.view.show_cursor();
-        ed.view.clear_screen();
-
-        ed
+        }
     }
 
     pub fn refresh_screen(&mut self) {
-        // self.view.hide_cursor();
+        self.view.hide_cursor();
+        self.view.render_through();
+
         // Start drawing from the top left
-        // self.view.position_cursor(1, 1);
+        self.view.position_cursor(1, 1);
 
-        // self.buffer_rows();
-
-        // // Actually render the buffer
-        // self.view.render();
+        self.buffer_rows();
 
         self.view.position_cursor(self.cursor_x, self.cursor_y);
-        // self.view.show_cursor();
-        //
-        // self.dirty = false;
+        self.view.show_cursor();
+
+        // Actually render the buffer
+        self.view.render_through();
+        self.dirty = false;
     }
 
     fn move_cursor(&mut self, key: termion::event::Key) {
@@ -91,27 +85,11 @@ impl Editor {
         use std::time::Duration;
 
         loop {
-            thread::sleep(Duration::from_millis(400));
+            // thread::sleep(Duration::from_millis(400));
 
             if self.dirty {
-                self.view.clear_screen();
-                // eprintln!("hi\r\n");
-
-                self.view.show_cursor();
-                self.view.position_cursor(10, 10);
-
-
-                // self.view.out.flush().unwrap();
-                // self.refresh_screen();
-                // eprintln!("rendering screen");
-                // self.dirty = false;
+                self.refresh_screen();
             }
-
-            // Only refresh the screen if we know something has changed
-            // self.view.show_cursor();
-            // eprintln!("dirty {}", self.dirty);
-            // write!(self.view.out, "{}{}", termion::cursor::Goto(self.cursor_x, self.cursor_y), termion::clear::CurrentLine).unwrap();
-            // write!(self.view.out, "{}", termion::clear::CurrentLine).unwrap();
 
             let b = self.input_stream.next();
             // write!(stdout, "\r{:?}    <- This demonstrates the async read input char. Between each update a 100 ms. is waited, simply to demonstrate the async fashion. \n\r", b).unwrap();
@@ -134,18 +112,18 @@ impl Editor {
             }
 
             // write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
-            use std::io::Write;
-            self.view.out.flush().unwrap();
         }
     }
 
     /// Push rows to render buffer, to be rendered in the view
     // TODO check a dirty bit to see if the row ahs changed before rerendering
     fn buffer_rows(&mut self) {
-        static COUNTER: u32 = 0;
         for y in 0..(self.view.term_height-1) {
             // u16 division is closed, so rounding isn't ever an issue
-            let welcome_str = format!("ipsum v0.1{}", COUNTER);
+            use std::time::SystemTime;
+
+            // let welcome_str = "ipsum v0.1";
+            let welcome_str = format!("ipsum v0.1 {:?}", SystemTime::now());
 
             let padding_len = (self.view.term_width as usize - welcome_str.len()) / 2;
             let mut padding_str = String::with_capacity(padding_len);
@@ -154,14 +132,13 @@ impl Editor {
             }
 
             if y == self.view.term_height / 3 {
-                self.view.render_buffer.push_str(&format!("{}~{}{}\r\n", termion::clear::CurrentLine, padding_str, welcome_str));
+                self.view.write(&format!("{}~{}{}\r\n", termion::clear::CurrentLine, padding_str, welcome_str));
             } else {
-                self.view.render_buffer.push_str(&format!("{}~\r\n", termion::clear::CurrentLine));
+                self.view.write(&format!("{}~\r\n", termion::clear::CurrentLine));
             }
 
         }
-        // self.view.render_buffer.push_str("~");
-        self.view.render_buffer.push_str(&format!("{}~", termion::clear::CurrentLine));
+        self.view.write(&format!("{}~", termion::clear::CurrentLine));
     }
 
 }
