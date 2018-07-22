@@ -1,8 +1,9 @@
-use std::io::Read;
+use std::io::{Read, stdin, Stdin};
 use termion::async_stdin;
 use termion::event::parse_event;
 use termion::event::Event;
 use termion::event::Key;
+use mio::*;
 
 use view::View;
 
@@ -13,7 +14,13 @@ enum Mode {
 
 pub struct Editor {
     view: View,
+
     input_stream: std::io::Bytes<termion::AsyncReader>,
+
+    // The input buffer should only read at most a few characters at
+    // a time so it will be static and hold 100 bytes to be safe
+    input_buffer: [u8; 100],
+
     mode: Mode,
 
     cursor_x: u16,
@@ -28,6 +35,7 @@ impl Editor {
         Editor {
             view: View::new(),
             input_stream: async_stdin().bytes(),
+            input_buffer: [0; 100],
             mode: Mode::Normal,
 
             cursor_x: 1,
@@ -44,7 +52,7 @@ impl Editor {
         // Start drawing from the top left
         self.view.position_cursor(1, 1);
 
-        self.buffer_rows();
+        // self.buffer_rows();
 
         self.view.position_cursor(self.cursor_x, self.cursor_y);
         self.view.show_cursor();
@@ -81,41 +89,56 @@ impl Editor {
     }
 
     pub fn process_keypresses(&mut self) {
-        use std::thread;
-        use std::time::Duration;
+        let poll = Poll::new().unwrap();
+
+        const IN: Token = Token(0);
+        const STDIN_FILENO: i32 = 0;
+
+        // let mut fd0: File = unsafe {
+        //     FromRawFd::from_raw_fd(STDIN_FILENO)
+        // };
+        let evented_stdin = unix::EventedFd(&STDIN_FILENO);
+        poll.register(&evented_stdin, IN, Ready::readable(),
+                      PollOpt::edge()).unwrap();
+
+        let mut events = Events::with_capacity(1024);
 
         loop {
-            // thread::sleep(Duration::from_millis(400));
-
             if self.dirty {
                 self.refresh_screen();
             }
 
-            let b = self.input_stream.next();
-            // write!(stdout, "\r{:?}    <- This demonstrates the async read input char. Between each update a 100 ms. is waited, simply to demonstrate the async fashion. \n\r", b).unwrap();
+            poll.poll(&mut events, None).unwrap();
 
-            if let Some(Ok(l)) = b {
-                let event = parse_event(l, &mut self.input_stream);
+            for event in events.iter() {
+                println!("hi there");
+                if let IN = event.token() {
+                    let b = self.input_stream.next();
 
-                if let Ok(e) = event {
-                    match e {
-                        Event::Key(Key::Char('q')) => return,
-                        Event::Key(k) => self.process_keypress(k),
-                        _ => unimplemented!(),
-                    };
-                } else {
-                    // Probably just ignore unexpected events
-                    unimplemented!();
+                    if let Some(Ok(l)) = b {
+                        let event = parse_event(l, &mut self.input_stream);
+
+                        if let Ok(e) = event {
+                            match e {
+                                Event::Key(Key::Char('q')) => break,
+                                Event::Key(k) => self.process_keypress(k),
+                                _ => unimplemented!(),
+                            };
+                        } else {
+                            // Probably just ignore unexpected events
+                            unimplemented!();
+                        }
+
+                        // write!(self.view.out, "event {:?}\r\n", event).unwrap();
+                    }
                 }
-
-                // write!(self.view.out, "event {:?}\r\n", event).unwrap();
             }
 
             // write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         }
     }
 
-    /// Push rows to render buffer, to be rendered in the view
+    /// Push rows to render buffer (a BufferedWriter), to be rendered in the view
     // TODO check a dirty bit to see if the row ahs changed before rerendering
     fn buffer_rows(&mut self) {
         for y in 0..(self.view.term_height-1) {
@@ -140,5 +163,4 @@ impl Editor {
         }
         self.view.write(&format!("{}~", termion::clear::CurrentLine));
     }
-
 }

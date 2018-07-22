@@ -1,6 +1,7 @@
 immediate
 - pager
-    - allowing cursor to be positioned according to keypresses (hjkl)
+    - rewrite event system with mio poll
+        - will not support windows
     - read text into ropes
     - render text from ropes
 - modes
