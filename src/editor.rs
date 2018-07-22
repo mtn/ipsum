@@ -1,9 +1,6 @@
-use std::io::{Read, stdin, Stdin};
-use termion::async_stdin;
-use termion::event::parse_event;
-use termion::event::Event;
-use termion::event::Key;
-use mio::*;
+use std::io::{stdin, Stdin};
+use termion::input::TermRead;
+use termion::event::{Event, Key};
 
 use view::View;
 
@@ -14,12 +11,6 @@ enum Mode {
 
 pub struct Editor {
     view: View,
-
-    input_stream: std::io::Bytes<termion::AsyncReader>,
-
-    // The input buffer should only read at most a few characters at
-    // a time so it will be static and hold 100 bytes to be safe
-    input_buffer: [u8; 100],
 
     mode: Mode,
 
@@ -34,8 +25,6 @@ impl Editor {
     pub fn new(filename: Option<&str>) -> Editor {
         Editor {
             view: View::new(),
-            input_stream: async_stdin().bytes(),
-            input_buffer: [0; 100],
             mode: Mode::Normal,
 
             cursor_x: 1,
@@ -89,52 +78,21 @@ impl Editor {
     }
 
     pub fn process_keypresses(&mut self) {
-        let poll = Poll::new().unwrap();
-
-        const IN: Token = Token(0);
-        const STDIN_FILENO: i32 = 0;
-
-        // let mut fd0: File = unsafe {
-        //     FromRawFd::from_raw_fd(STDIN_FILENO)
-        // };
-        let evented_stdin = unix::EventedFd(&STDIN_FILENO);
-        poll.register(&evented_stdin, IN, Ready::readable(),
-                      PollOpt::edge()).unwrap();
-
-        let mut events = Events::with_capacity(1024);
+        let stdin = stdin();
+        let mut events = stdin.events();
 
         loop {
             if self.dirty {
                 self.refresh_screen();
             }
 
-            poll.poll(&mut events, None).unwrap();
-
-            for event in events.iter() {
-                println!("hi there");
-                if let IN = event.token() {
-                    let b = self.input_stream.next();
-
-                    if let Some(Ok(l)) = b {
-                        let event = parse_event(l, &mut self.input_stream);
-
-                        if let Ok(e) = event {
-                            match e {
-                                Event::Key(Key::Char('q')) => break,
-                                Event::Key(k) => self.process_keypress(k),
-                                _ => unimplemented!(),
-                            };
-                        } else {
-                            // Probably just ignore unexpected events
-                            unimplemented!();
-                        }
-
-                        // write!(self.view.out, "event {:?}\r\n", event).unwrap();
-                    }
-                }
+            if let Some(event) = events.next() {
+                match event.unwrap() {
+                    Event::Key(Key::Char('q')) => return,
+                    Event::Key(k) => self.process_keypress(k),
+                    _ => unimplemented!(),
+                };
             }
-
-            // write!(stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
         }
     }
 

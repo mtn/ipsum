@@ -1,6 +1,5 @@
 #![feature(extern_prelude)]
 extern crate termion;
-extern crate mio;
 
 mod editor;
 mod view;

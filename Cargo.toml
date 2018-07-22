@@ -6,4 +6,3 @@ authors = ["Michael Noronha <michaeltnoronha@gmail.com>"]
 [dependencies]
 termion = "1.5.1"
 ropey = "0.8.0"
-mio = "0.6.15"

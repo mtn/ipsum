@@ -1,7 +1,6 @@
 immediate
+- synchronous rendering
 - pager
-    - rewrite event system with mio poll
-        - will not support windows
     - read text into ropes
     - render text from ropes
 - modes
@@ -14,6 +13,7 @@ immediate
         - eg. insert comment, based on language definition
 
 eventual
+- proper asynchronous stdin with mpsc and tokio
 - detecting resizing
 - text soft wrapping
 - pencil mode?
