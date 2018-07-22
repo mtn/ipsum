@@ -1,6 +1,6 @@
-use std::io::{stdin, Stdin};
-use termion::input::TermRead;
+use std::io::stdin;
 use termion::event::{Event, Key};
+use termion::input::TermRead;
 
 use view::View;
 
@@ -17,19 +17,28 @@ pub struct Editor {
     cursor_x: u16,
     cursor_y: u16,
 
-    // Indicates if the buffer should be re-rendered
+    // Dirty rows that need to be re-rendered
+    // This allows us to not superfluously re-render the screen
+    dirty_rows: Vec<u16>,
     dirty: bool,
 }
 
 impl Editor {
     pub fn new(filename: Option<&str>) -> Editor {
+        let view = View::new();
+        let mut dirty_rows: Vec<u16> = Vec::with_capacity(view.term_height as usize);
+        for i in 1..=view.term_height {
+            dirty_rows.push(i);
+        }
+
         Editor {
-            view: View::new(),
+            view,
             mode: Mode::Normal,
 
             cursor_x: 1,
             cursor_y: 1,
 
+            dirty_rows,
             dirty: true,
         }
     }
@@ -41,14 +50,16 @@ impl Editor {
         // Start drawing from the top left
         self.view.position_cursor(1, 1);
 
-        // self.buffer_rows();
+        // Buffering rows will clear the queue of dirty rows
+        if !self.dirty_rows.is_empty() {
+            self.buffer_rows();
+        }
 
         self.view.position_cursor(self.cursor_x, self.cursor_y);
         self.view.show_cursor();
 
         // Actually render the buffer
         self.view.render_through();
-        self.dirty = false;
     }
 
     fn move_cursor(&mut self, key: termion::event::Key) {
@@ -62,6 +73,8 @@ impl Editor {
             Char('l') => self.cursor_x += 1,
             _ => panic!("Unexpected character type {:?} in move_cursor", key),
         }
+
+        self.dirty_rows.push(self.view.term_height / 3);
     }
 
     fn process_keypress(&mut self, key: termion::event::Key) {
@@ -72,7 +85,7 @@ impl Editor {
             Char('k') | Char('j') | Char('h') | Char('l') => {
                 self.move_cursor(key);
                 self.dirty = true;
-            },
+            }
             _ => unimplemented!(),
         }
     }
@@ -88,7 +101,11 @@ impl Editor {
 
             if let Some(event) = events.next() {
                 match event.unwrap() {
-                    Event::Key(Key::Char('q')) => return,
+                    Event::Key(Key::Char('q')) => {
+                        self.view.position_cursor(1, 1);
+                        self.view.clear_screen();
+                        return;
+                    }
                     Event::Key(k) => self.process_keypress(k),
                     _ => unimplemented!(),
                 };
@@ -99,26 +116,30 @@ impl Editor {
     /// Push rows to render buffer (a BufferedWriter), to be rendered in the view
     // TODO check a dirty bit to see if the row ahs changed before rerendering
     fn buffer_rows(&mut self) {
-        for y in 0..(self.view.term_height-1) {
-            // u16 division is closed, so rounding isn't ever an issue
-            use std::time::SystemTime;
+        use std::time::SystemTime;
 
-            // let welcome_str = "ipsum v0.1";
-            let welcome_str = format!("ipsum v0.1 {:?}", SystemTime::now());
+        let welcome_str = format!("ipsum v0.1 {:?}", SystemTime::now());
 
-            let padding_len = (self.view.term_width as usize - welcome_str.len()) / 2;
-            let mut padding_str = String::with_capacity(padding_len);
-            for _ in 0..padding_len {
-                padding_str.push(' ');
-            }
-
-            if y == self.view.term_height / 3 {
-                self.view.write(&format!("{}~{}{}\r\n", termion::clear::CurrentLine, padding_str, welcome_str));
-            } else {
-                self.view.write(&format!("{}~\r\n", termion::clear::CurrentLine));
-            }
-
+        let padding_len = (self.view.term_width as usize - welcome_str.len()) / 2;
+        let mut padding_str = String::with_capacity(padding_len);
+        for _ in 0..padding_len {
+            padding_str.push(' ');
         }
-        self.view.write(&format!("{}~", termion::clear::CurrentLine));
+
+        for y in &self.dirty_rows {
+            if *y == self.view.term_height / 3 {
+                self.view.position_cursor(1, *y);
+                self.view.clear_line();
+                self.view.write("~");
+                self.view.write(&padding_str);
+                self.view.write(&welcome_str);
+            } else {
+                self.view.position_cursor(1, *y);
+                self.view.clear_line();
+                self.view.write("~");
+            }
+        }
+
+        self.dirty_rows.clear();
     }
 }

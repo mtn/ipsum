@@ -5,7 +5,6 @@ use termion::raw::IntoRawMode;
 use termion::raw::RawTerminal;
 
 pub struct View {
-    // TODO make out private
     out: RawTerminal<io::BufWriter<io::Stdout>>,
     pub term_width: u16,
     pub term_height: u16,
@@ -43,12 +42,17 @@ impl View {
 
     /// Push the buffer to the screen (flush)
     pub fn render_through(&mut self) {
-        self.out.flush();
+        self.out.flush().unwrap();
     }
 
     /// Clear screen
     pub fn clear_screen(&mut self) {
         write!(self.out, "{}", termion::clear::All).unwrap();
+    }
+
+    /// Clear the line
+    pub fn clear_line(&mut self) {
+        write!(self.out, "{}", termion::clear::CurrentLine).unwrap();
     }
 
     /// Render the cursor at its current position

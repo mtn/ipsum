@@ -1,4 +1,5 @@
 #![feature(extern_prelude)]
+extern crate ropey;
 extern crate termion;
 
 mod editor;

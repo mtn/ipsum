@@ -1,5 +1,6 @@
 immediate
-- synchronous rendering
+- rerender only dirty lines
+    - should be able to scroll without jumping cursor
 - pager
     - read text into ropes
     - render text from ropes
@@ -11,6 +12,8 @@ immediate
 - syntax highlighting
     - additional normal mode bindings
         - eg. insert comment, based on language definition
+
+better logging
 
 eventual
 - proper asynchronous stdin with mpsc and tokio
