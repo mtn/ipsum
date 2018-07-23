@@ -3,6 +3,7 @@ use termion::event::{Event, Key};
 use termion::input::TermRead;
 
 use view::View;
+use buffer::Buffer;
 
 enum Mode {
     Insert,
@@ -11,6 +12,7 @@ enum Mode {
 
 pub struct Editor {
     view: View,
+    text: Buffer,
 
     mode: Mode,
 
@@ -27,12 +29,15 @@ impl Editor {
     pub fn new(filename: Option<&str>) -> Editor {
         let view = View::new();
         let mut dirty_rows: Vec<u16> = Vec::with_capacity(view.term_height as usize);
-        for i in 1..=view.term_height {
+        for i in 2..=view.term_height {
             dirty_rows.push(i);
         }
 
+        let text = Buffer::new(filename).unwrap();
+        println!("{:?}", text);
         Editor {
             view,
+            text: Buffer::new(filename).unwrap(),
             mode: Mode::Normal,
 
             cursor_x: 1,
@@ -67,10 +72,42 @@ impl Editor {
 
         // eprintln!("{} {}", self.cursor_x, self.cursor_y);
         match key {
-            Char('k') => self.cursor_y -= 1,
-            Char('j') => self.cursor_y += 1,
-            Char('h') => self.cursor_x -= 1,
-            Char('l') => self.cursor_x += 1,
+            Char('k') | Up => {
+                if self.cursor_y != 1 {
+                    self.cursor_y -= 1;
+                }
+            }
+            Char('j') | Down => {
+                if self.cursor_y != self.view.term_height {
+                    self.cursor_y += 1;
+                }
+            }
+            Char('h') | Left => {
+                if self.cursor_x != 1 {
+                    self.cursor_x -= 1;
+                }
+            }
+            Char('l') | Right => {
+                if self.cursor_x != self.view.term_width {
+                    self.cursor_x += 1;
+                }
+            }
+            Home => {
+                self.cursor_x = 0;
+            }
+            End => {
+                self.cursor_x = self.view.term_width;
+            },
+            PageUp => {
+                for _ in 0..self.view.term_height {
+                    self.move_cursor(Up);
+                }
+            },
+            PageDown => {
+                for _ in 0..self.view.term_height {
+                    self.move_cursor(Down);
+                }
+            },
             _ => panic!("Unexpected character type {:?} in move_cursor", key),
         }
 
@@ -79,14 +116,14 @@ impl Editor {
 
     fn process_keypress(&mut self, key: termion::event::Key) {
         use termion::event::Key::*;
-        // eprintln!("Processing keypress!");
 
         match key {
-            Char('k') | Char('j') | Char('h') | Char('l') => {
+            Char('k') | Char('j') | Char('h') | Char('l') | Home | End | Up | Down | Left
+            | Right | PageUp | PageDown => {
                 self.move_cursor(key);
                 self.dirty = true;
             }
-            _ => unimplemented!(),
+            _ => panic!("Not yet handled key {:?}", key),
         }
     }
 
@@ -101,7 +138,7 @@ impl Editor {
 
             if let Some(event) = events.next() {
                 match event.unwrap() {
-                    Event::Key(Key::Char('q')) => {
+                    Event::Key(Key::Ctrl('q')) => {
                         self.view.position_cursor(1, 1);
                         self.view.clear_screen();
                         return;
@@ -114,7 +151,6 @@ impl Editor {
     }
 
     /// Push rows to render buffer (a BufferedWriter), to be rendered in the view
-    // TODO check a dirty bit to see if the row ahs changed before rerendering
     fn buffer_rows(&mut self) {
         use std::time::SystemTime;
 
