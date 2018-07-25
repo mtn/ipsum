@@ -2,8 +2,8 @@ use std::io::stdin;
 use termion::event::{Event, Key};
 use termion::input::TermRead;
 
-use view::View;
 use buffer::Buffer;
+use view::View;
 
 enum Mode {
     Insert,
@@ -12,7 +12,9 @@ enum Mode {
 
 pub struct Editor {
     view: View,
-    text: Buffer,
+
+    // A editor session can consist of multiple buffers, like vim
+    buffers: Vec<Buffer>,
 
     mode: Mode,
 
@@ -33,11 +35,12 @@ impl Editor {
             dirty_rows.push(i);
         }
 
-        let text = Buffer::new(filename).unwrap();
-        println!("{:?}", text);
+        let buffer = Buffer::new(filename).unwrap();
+        println!("{:?}", buffer);
+
         Editor {
             view,
-            text: Buffer::new(filename).unwrap(),
+            buffers: vec![Buffer::new(filename).unwrap()],
             mode: Mode::Normal,
 
             cursor_x: 1,
@@ -97,17 +100,17 @@ impl Editor {
             }
             End => {
                 self.cursor_x = self.view.term_width;
-            },
+            }
             PageUp => {
                 for _ in 0..self.view.term_height {
                     self.move_cursor(Up);
                 }
-            },
+            }
             PageDown => {
                 for _ in 0..self.view.term_height {
                     self.move_cursor(Down);
                 }
-            },
+            }
             _ => panic!("Unexpected character type {:?} in move_cursor", key),
         }
 

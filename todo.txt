@@ -1,9 +1,7 @@
 immediate
-- rerender only dirty lines
-    - should be able to scroll without jumping cursor
 - pager
-    - read text into ropes
     - render text from ropes
+    - render multiple buffers
 - modes
     - everything is in normal mode till now
     - edit text

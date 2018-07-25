@@ -1,9 +1,9 @@
 // A buffer is a text document
 // You will be able to edit multiple buffers at a time
 
-use std::io::{BufReader, Result};
-use std::fs::File;
 use ropey::Rope;
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, Result};
 
 #[derive(Debug, Clone)]
 pub struct Buffer {
@@ -15,8 +15,10 @@ pub struct Buffer {
 impl Buffer {
     pub fn new(filename: Option<&str>) -> Result<Buffer> {
         if let Some(filename) = filename {
+            let file = Self::open_file(filename);
+
             Ok(Buffer {
-                text: Rope::from_reader(BufReader::new(File::open(filename)?))?,
+                text: Rope::from_reader(BufReader::new(file?))?,
                 name: Some(String::from(filename)),
                 position: 0,
             })
@@ -29,7 +31,15 @@ impl Buffer {
         }
     }
 
-    pub fn name_buffer(&mut self, filename: &str) -> Option<Buffer> {
+    fn open_file(filename: &str) -> Result<File> {
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(filename)
+    }
+
+    pub fn set_name(&mut self, filename: &str) -> Option<Buffer> {
         // If the buffer isn't named, it is named in its first write to disk
         if self.name == None {
             self.name = Some(String::from(filename));
@@ -43,5 +53,16 @@ impl Buffer {
         new_named_buffer.name = Some(String::from(filename));
 
         Some(new_named_buffer)
+    }
+
+    /// Write the buffer to disk
+    // Todo return messages on failures, do be displayed in the status bar
+    pub fn save(&mut self) -> bool {
+        if self.name == None {
+            return false;
+        }
+
+        // let file = Self::open_file(&self.name.unwrap());
+        unimplemented!();
     }
 }

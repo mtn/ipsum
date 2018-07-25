@@ -2,8 +2,8 @@
 extern crate ropey;
 extern crate termion;
 
-mod editor;
 mod buffer;
+mod editor;
 mod view;
 
 fn main() {
